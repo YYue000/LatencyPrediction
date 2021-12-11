@@ -1,0 +1,51 @@
+model:
+  type: GCN
+  kwargs:
+    feature_dim: 0
+    depth: 4
+    hidden_dim: 600
+    dropout_rate: 2.0e-3
+
+    initializer:
+      gc:
+        method: normal
+      fc:
+        method: normal
+    
+    criterion_cfg:
+      type: L1
+      loss_weight: 1.0
+
+
+trainer:
+  epochs: 250
+  optimizer:
+    type: AdamW
+    kwargs:
+      lr: 4.0e-4
+      weight_decay: 5.0e-4
+  lr_scheduler:
+    type: ReduceLROnPlateau
+    kwargs:
+      mode: min
+      factor: 0.5
+      patience: 10
+      threshold: 0.01
+      verbose: True
+  
+train:
+  leeways: 1
+test:
+  leeways: [0.01, 0.05, 0.1, 0.2]
+
+data:
+  aug_file_path: 'flops.pickle'
+  batch_size: 
+  train:
+    meta_file_path: ''
+  val:
+    meta_file_path: ''
+    shuffle: False
+  test:
+    meta_file_path: ''
+    shuffle: False
