@@ -9,9 +9,10 @@ def parse_config(cfg_name):
         cfg = yaml.safe_load(stream)
     return cfg
 
-from models.gcn import GCN, MLP
+from models.gcn import GCN #, MLP
 
 def build_model(cfg_model):
+    print(cfg_model)
     model_type = cfg_model['type']
     if model_type == 'GCN':
         model = GCN(**cfg_model['kwargs'])

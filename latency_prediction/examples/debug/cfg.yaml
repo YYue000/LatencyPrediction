@@ -5,12 +5,11 @@ model:
     depth: 4
     hidden_dim: 600
     dropout_rate: 2.0e-3
+    augments_dim: 0
 
     initializer:
       gc:
-        method: normal
-      fc:
-        method: normal
+        method: thomas
     
     criterion_cfg:
       type: L1
@@ -19,6 +18,7 @@ model:
 
 trainer:
   epochs: 250
+  step_on_val_loss_epoch: 20
   optimizer:
     type: AdamW
     kwargs:
@@ -39,13 +39,13 @@ test:
   leeways: [0.01, 0.05, 0.1, 0.2]
 
 data:
-  aug_file_path: 'flops.pickle'
-  batch_size: 
+    #aug_file_path: '../../datasets/flops.pickle'
+  batch_size: 1
   train:
-    meta_file_path: ''
+    meta_file_path: '../../datasets/desktop-gpu-gtx-1080ti-fp32-train.pickle'
   val:
-    meta_file_path: ''
+    meta_file_path: '../../datasets/desktop-gpu-gtx-1080ti-fp32-val.pickle'
     shuffle: False
   test:
-    meta_file_path: ''
+    meta_file_path: '../../datasets/desktop-gpu-gtx-1080ti-fp32-test.pickle'
     shuffle: False

@@ -1,4 +1,5 @@
 import torch.nn as nn
+import math
 
 def initialize_normal(m, std):
     nn.init.normal_(m.weight.data, std=std)
@@ -20,6 +21,13 @@ def initialize_orthogonal(m):
     if m.bias is not None:
         m.bias.data.zero_()
 
+def initialize_thomas(m):
+    size = m.weight.size(-1)
+    stdv = 1. / math.sqrt(size)
+    nn.init.uniform_(m.weight.data, -stdv, stdv)
+    if m.bias is not None:
+        nn.init.uniform_(m.bias.data, -stdv, stdv)
+
 def initialize(module, ModuleType, method, **kwargs):
     for m in module.modules():
         if isinstance(m, ModuleType):
@@ -31,5 +39,7 @@ def initialize(module, ModuleType, method, **kwargs):
                 initialize_xavier_uniform(m, **kwargs)
             elif method == 'orthogonal':
                 initialize_orthogonal(m, **kwargs)
+            elif method == 'thomas':
+                initialize_thomas(m, **kwargs)
             else:
                 raise NotImplementedError

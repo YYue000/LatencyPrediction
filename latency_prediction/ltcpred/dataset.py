@@ -54,7 +54,7 @@ class LatencyDataset(Dataset):
         return self.dataset[index]
 
 
-def NASBench201Dataset(LatencyDataset):
+class NASBench201Dataset(LatencyDataset):
     """
     Reimplemented version from the original paper
     """    
@@ -170,7 +170,7 @@ def NASBench201Dataset(LatencyDataset):
         return matrix
 
 
-def NASBench201Dataset2(LatencyDataset):
+class NASBench201Dataset2(LatencyDataset):
     """
     Refactored version
     """    
@@ -198,6 +198,17 @@ def NASBench201Dataset2(LatencyDataset):
         return adjacency_matrix
 
 
+
+def _collate_fn(batch):
+    ipt = {k:[_[k] for _ in batch] for k in ['arch_id', 'arch']}
+    for k in ['adjacency', 'features', 'latency']:
+        ipt[k] = torch.as_tensor([_[k] for _ in batch])
+    k = 'augments'
+    if k in batch[0].keys():
+        ipt[k] = torch.as_tensor([_[k] for _ in batch])
+    return ipt
+
+
 def build_dataloader(cfg_data, mode):
     cfg_data = cfg_data.copy()
     cfg_data.update(cfg_data[mode])
@@ -206,16 +217,7 @@ def build_dataloader(cfg_data, mode):
     if search_space == 'nasbench201':
         dataset = NASBench201Dataset(cfg_data['meta_file_path'], cfg_data.get('aug_file_path', None))
     else:
-        raise NotImplementedError
-    
-    def _collate_fn(batch):
-        ipt = {k:[_[k] for _ in batch] for k in ['arch_id', 'arch']}
-        for k in ['adjacency', 'features', 'latency']:
-            ipt[k] = torch.as_tensor([_[k] for _ in batch])
-        k = 'augments'
-        if k in batch[0].keys():
-            ipt[k] = torch.as_tensor([_[k] for _ in batch])
-        return ipt
+        raise NotImplementedError 
 
     dataloader = DataLoader(dataset, batch_size=cfg_data['batch_size'], 
                             shuffle=cfg_data.get('shuffle', True),

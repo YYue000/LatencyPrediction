@@ -11,16 +11,17 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s-%(filename)s#%(linen
 logger = logging.getLogger('global')
 
 
-def train(model, optimizer, lr_scheduler, cfg):
+def train(model, cfg):
     train_data = build_dataloader(cfg['data'], 'train')
     val_data = build_dataloader(cfg['data'], 'val')
     
+    epochs = cfg['trainer']['epochs']
     optimizer = build_optimizer(cfg['trainer']['optimizer'], model)
-    step_on_val_loss_epoch = cfg['trainer']['optimizer'].get('step_on_val_loss_epoch', cfg['epochs']+1)
+    step_on_val_loss_epoch = cfg['trainer']['optimizer'].get('step_on_val_loss_epoch', epochs+1)
     lr_scheduler = build_lr_scheduler(cfg['trainer']['lr_scheduler'], optimizer)
     optimizer.zero_grad()
 
-    for epoch in cfg['epochs']:
+    for epoch in range(epochs):
         model.train()
         for it, input in enumerate(train_data):
             loss = model(input)
@@ -64,7 +65,7 @@ def test(model, test_data, cfg, return_loss=False):
 def get_cfg(cfg_raw, mode):
     cfg_runtime = copy.deepcopy(cfg_raw)
     cfg_runtime.update(cfg_runtime[mode])
-    return cfg_runtime, cfg_raw
+    return cfg_runtime
 
 def main(args):
     cfg_raw = parse_config(args.cfg_file)
@@ -74,7 +75,7 @@ def main(args):
     else:
         cfg = cfg_test
     
-    model = build_model(cfg)
+    model = build_model(cfg['model'])
     
     if not args.test:
         train(model, cfg)
