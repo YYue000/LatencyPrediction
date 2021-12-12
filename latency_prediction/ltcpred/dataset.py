@@ -58,7 +58,7 @@ class NASBench201Dataset(LatencyDataset):
     """
     Reimplemented version from the original paper
     """    
-    def __init__(self, meta_file_path, aug_file_path=None, prune=True, keep_dims=False):
+    def __init__(self, meta_file_path, aug_file_path=None, prune=True, keep_dims=True):
         self.arch_len = 6
         self.node_num = self.arch_len+2+1 # 6 for len(arch), 2 for input-output node, 1 for global node
         self.prune = prune

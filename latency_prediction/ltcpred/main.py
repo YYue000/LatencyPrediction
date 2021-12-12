@@ -17,7 +17,8 @@ def train(model, cfg):
     
     epochs = cfg['trainer']['epochs']
     optimizer = build_optimizer(cfg['trainer']['optimizer'], model)
-    step_on_val_loss_epoch = cfg['trainer']['optimizer'].get('step_on_val_loss_epoch', epochs+1)
+    step_on_val_loss = (cfg['trainer']['lr_scheduler']['type'] in ['ReduceLROnPlateau']) 
+    step_on_val_loss_epoch = cfg['trainer']['lr_scheduler'].get('step_on_val_loss_epoch', -1)
     lr_scheduler = build_lr_scheduler(cfg['trainer']['lr_scheduler'], optimizer)
     optimizer.zero_grad()
 
@@ -30,13 +31,15 @@ def train(model, cfg):
         
         # validation
         _, accs, val_loss = test(model, val_data, cfg, return_loss=True)
-        if epoch > step_on_val_loss_epoch:
-            lr_scheduler.step(val_loss)
+        if step_on_val_loss:
+            if epoch > step_on_val_loss_epoch:
+                lr_scheduler.step(val_loss)
         else:
             lr_scheduler.step()
-        logger.info(f'epoch: {epoch} val acc: {accs}')
+        logger.info(f'epoch: {epoch}/{epochs} val loss: {val_loss} val acc: {accs}')
         
     model.train() # model is at training at the end of train()
+
     return model
 
 
@@ -51,7 +54,7 @@ def test(model, test_data, cfg, return_loss=False):
             y, loss = model.forward(input, return_loss)
             if loss is not None:
                 all_loss += loss/N
-            output = {input[k] for k in ['arch_id', 'arch']}
+            output = {k:input[k] for k in ['arch_id', 'arch']}
             output['prediction'] = y.numpy()
             latency = input.get('latency', None)
             if latency is not None:
@@ -79,10 +82,16 @@ def main(args):
     
     if not args.test:
         train(model, cfg)
+        save_path = 'checkpoints/ckpt.pth'
+        if not os.path.exists(os.path.dirname(save_path)):
+            os.makedirs(save_path)
+        torch.save(model.state_dict(), save_path)
+
         cfg = cfg_test
 
     test_data = build_dataloader(cfg['data'], 'test')
-    test(model, test_data, cfg)
+    _, accs, __ = test(model, test_data, cfg)
+    logger.info(f'{accs}')
     return
 
 if __name__ == '__main__':

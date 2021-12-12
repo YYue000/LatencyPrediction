@@ -20,11 +20,6 @@ class GraphConvolution(nn.Module):
             self.register_parameter('bias', None)
 
     def forward(self, adj_matrix, x):
-        ## for debug
-        t=torch.matmul(x, self.weight)
-        logger.info(f'{t.shape} {adj_matrix.shape}')
-
-
         out = torch.bmm(adj_matrix, torch.matmul(x, self.weight))
         if self.bias is not None:
             out = out + self.bias
@@ -59,7 +54,7 @@ class GCN(Predictor):
         self.gcs = nn.ModuleList(
             [GCNormReLUDrop(feature_dim if _ == 0 else hidden_dim, hidden_dim, dropout_rate) 
                 for _ in range(depth)])
-        self.fc = nn.Linear(hidden_dim+augments_dim, 1)
+        self.fc = nn.Linear(hidden_dim+augments_dim, 1).double()
         
         if initializer is not None:
             initializer_gc = initializer['gc']
@@ -71,11 +66,10 @@ class GCN(Predictor):
         logger.info(f'model {self}')
 
     def forward(self, input, return_loss=None):
-        logger.info(f'{input["arch"]}')
         adjacency = input['adjacency']
         x = input['features']
         augments = input.get('augments', None)
-        y = self._forward(adjacency, x, augments)
+        y = self._forward(adjacency, x, augments).reshape(-1)
         if not self.training and not return_loss:
             return y, None
             

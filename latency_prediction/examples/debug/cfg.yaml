@@ -1,7 +1,7 @@
 model:
   type: GCN
   kwargs:
-    feature_dim: 0
+    feature_dim: 6
     depth: 4
     hidden_dim: 600
     dropout_rate: 2.0e-3
@@ -25,6 +25,7 @@ trainer:
       lr: 4.0e-4
       weight_decay: 5.0e-4
   lr_scheduler:
+    step_on_val_loss_epoch: 20
     type: ReduceLROnPlateau
     kwargs:
       mode: min
@@ -34,18 +35,17 @@ trainer:
       verbose: True
   
 train:
-  leeways: 1
+  leeways: [1]
 test:
   leeways: [0.01, 0.05, 0.1, 0.2]
 
 data:
     #aug_file_path: '../../datasets/flops.pickle'
   batch_size: 1
+  shuffle: False
   train:
     meta_file_path: '../../datasets/desktop-gpu-gtx-1080ti-fp32-train.pickle'
   val:
     meta_file_path: '../../datasets/desktop-gpu-gtx-1080ti-fp32-val.pickle'
-    shuffle: False
   test:
     meta_file_path: '../../datasets/desktop-gpu-gtx-1080ti-fp32-test.pickle'
-    shuffle: False
