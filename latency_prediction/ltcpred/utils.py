@@ -12,7 +12,6 @@ def parse_config(cfg_name):
 from models.gcn import GCN #, MLP
 
 def build_model(cfg_model):
-    print(cfg_model)
     model_type = cfg_model['type']
     if model_type == 'GCN':
         model = GCN(**cfg_model['kwargs'])
@@ -40,9 +39,12 @@ def build_lr_scheduler(cfg_lr, optimizer):
 def evaluate(results, error_percentage):
     c= np.zeros(len(error_percentage))
     error_percentage = np.array(error_percentage).reshape(-1,1)
+    n = 0
     for res in results:
         latency = res['latency']
         prediction = res['prediction']
         delta = np.abs(latency-prediction)/latency
         c += np.sum(delta<error_percentage, axis=1)
+        n += len(latency)
+    c = c/n
     return c
