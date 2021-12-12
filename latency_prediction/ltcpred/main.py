@@ -1,8 +1,8 @@
 import argparse
+import os
 import copy
 import logging
 import torch
-from torch.optim import lr_scheduler, optimizer
 from dataset import build_dataloader
 
 from utils import parse_config, build_model, build_optimizer, build_lr_scheduler, evaluate
@@ -16,12 +16,17 @@ def train(model, cfg):
     val_data = build_dataloader(cfg['data'], 'val')
     
     epochs = cfg['trainer']['epochs']
+    best_val_acc = 0
+    best_epoch = None
+
     optimizer = build_optimizer(cfg['trainer']['optimizer'], model)
     step_on_val_loss = (cfg['trainer']['lr_scheduler']['type'] in ['ReduceLROnPlateau']) 
     step_on_val_loss_epoch = cfg['trainer']['lr_scheduler'].get('step_on_val_loss_epoch', -1)
     lr_scheduler = build_lr_scheduler(cfg['trainer']['lr_scheduler'], optimizer)
     optimizer.zero_grad()
 
+    save_freq = cfg['trainer'].get('save_freq', 1)
+    
     for epoch in range(epochs):
         model.train()
         for it, input in enumerate(train_data):
@@ -36,7 +41,14 @@ def train(model, cfg):
                 lr_scheduler.step(val_loss)
         else:
             lr_scheduler.step()
-        logger.info(f'epoch: {epoch}/{epochs} val loss: {val_loss} val acc: {accs}')
+        logger.info(f'epoch: {epoch}/{epochs} train loss: {loss:.4f} val loss: {val_loss:.4f} val acc: {accs}')
+        if accs[0] > best_val_acc:
+            best_epoch = epoch
+            best_val_acc = accs[0]
+            torch.save(model.state_dict(), f'checkpoints/ckpt_best.pth')
+
+        if epoch % save_freq == 0:
+            torch.save(model.state_dict(), f'checkpoints/ckpt_epoch{epoch}.pth')
         
     model.train() # model is at training at the end of train()
 
@@ -81,10 +93,11 @@ def main(args):
     model = build_model(cfg['model'])
     
     if not args.test:
-        train(model, cfg)
         save_path = 'checkpoints/ckpt.pth'
         if not os.path.exists(os.path.dirname(save_path)):
-            os.makedirs(save_path)
+            os.makedirs(os.path.dirname(save_path))
+
+        train(model, cfg)
         torch.save(model.state_dict(), save_path)
 
         cfg = cfg_test

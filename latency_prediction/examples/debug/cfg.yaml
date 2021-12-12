@@ -17,6 +17,7 @@ model:
 
 
 trainer:
+  save_freq: 10
   epochs: 250
   step_on_val_loss_epoch: 20
   optimizer:
@@ -34,18 +35,19 @@ trainer:
       threshold: 0.01
       verbose: True
   
-train:
-  leeways: [1]
-test:
-  leeways: [0.01, 0.05, 0.1, 0.2]
+leeways: [0.01, 0.05, 0.1, 0.2]
 
 data:
     #aug_file_path: '../../datasets/flops.pickle'
   batch_size: 1
-  shuffle: False
   train:
     meta_file_path: '../../datasets/desktop-gpu-gtx-1080ti-fp32-train.pickle'
   val:
     meta_file_path: '../../datasets/desktop-gpu-gtx-1080ti-fp32-val.pickle'
+    shuffle: False
   test:
     meta_file_path: '../../datasets/desktop-gpu-gtx-1080ti-fp32-test.pickle'
+    shuffle: False
+
+train: {}
+test: {}
