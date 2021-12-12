@@ -5,28 +5,46 @@ from torch.nn.parameter import Parameter
 from .predictor import Predictor
 from .initializer import initialize
 
+import logging
+logger = logging.getLogger('global')
+
 class GraphConvolution(nn.Module):
-    def __init__(self,  feature_shape, bias=True):
+    def __init__(self,  in_features, out_features, bias=True):
         super(GraphConvolution, self).__init__()
-        self.weight = Parameter(torch.Tensor(feature_shape))
+        self.in_features = in_features
+        self.out_features = out_features
+        self.weight = Parameter(torch.Tensor(in_features, out_features))
         if bias:
-            self.bias = Parameter(torch.Tensor(feature_shape[1]))
+            self.bias = Parameter(torch.Tensor(out_features))
         else:
             self.register_parameter('bias', None)
 
     def forward(self, adj_matrix, x):
-        out = torch.bmm(adj_matrix, torch.matmul( x, self.weight))
+        logger.info(f'{self.weight.shape} {x.shape}')
+        out = torch.bmm(adj_matrix, torch.matmul(x, self.weight))
         if self.bias is not None:
             out = out + self.bias
         return out
 
-def gc_norm_relu_drop(feature_shape, dropout_rate):
-    return nn.Sequential(
-        GraphConvolution(feature_shape),
-        nn.LayerNorm(feature_shape[1]),
-        nn.ReLU(inplace=True),
-        nn.Dropout(dropout_rate))
-        
+    def __repr__(self):
+        return  f'{self.__class__.__name__} (in_features={self.in_features}, out_features={self.out_features}, bias={self.bias is not None})'
+
+class GCNormReLUDrop(nn.Module):
+    def __init__(self, in_features, out_features, dropout_rate):
+        super(GCNormReLUDrop, self).__init__()
+        self.gc = GraphConvolution(in_features, out_features)
+        self.ln = nn.LayerNorm(out_features)
+        self.relu = nn.ReLU(inplace=True)
+        self.drop = nn.Dropout(dropout_rate)
+
+    def forward(self, adjacency, x):
+        x = self.gc(adjacency, x)
+        x = self.ln(x)
+        x = self.relu(x)
+        x = self.drop(x)
+        return x
+
+
 class GCN(Predictor):
     def __init__(self, depth, 
                     feature_dim, hidden_dim, augments_dim, dropout_rate,
@@ -34,8 +52,8 @@ class GCN(Predictor):
                     criterion_cfg=None):
         super(GCN, self).__init__(criterion_cfg)
 
-        self.gcs = nn.Sequential(
-            *[gc_norm_relu_drop([feature_dim if _ == 0 else hidden_dim, hidden_dim], dropout_rate) 
+        self.gcs = nn.ModuleList(
+            [GCNormReLUDrop(feature_dim if _ == 0 else hidden_dim, hidden_dim, dropout_rate) 
                 for _ in range(depth)])
         self.fc = nn.Linear(hidden_dim+augments_dim, 1)
         
@@ -46,11 +64,13 @@ class GCN(Predictor):
             if initializer_fc is not None:
                 initialize(self.fc, nn.Linear,  **initializer_fc)
         
+        logger.info(f'model {self}')
+
     def forward(self, input, return_loss=None):
-        adjency = input['adjacency']
+        adjacency = input['adjacency']
         x = input['features']
         augments = input.get('augments', None)
-        y = self._forward(adjency, x, augments)
+        y = self._forward(adjacency, x, augments)
         if not self.training and not return_loss:
             return y, None
             
@@ -61,8 +81,9 @@ class GCN(Predictor):
         else:
             return y, loss
     
-    def _forward(self, adjency, x, augments=None):
-        x = self.gcs(adjency, x)
+    def _forward(self, adjacency, x, augments=None):
+        for gc in self.gcs:
+            x = gc(adjacency, x)
         x = x[:,0] # use global node
         if augments is not None:
             x = torch.cat([x, augments], dim=1)
