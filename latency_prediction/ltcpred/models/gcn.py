@@ -13,14 +13,18 @@ class GraphConvolution(nn.Module):
         super(GraphConvolution, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.weight = Parameter(torch.Tensor(in_features, out_features))
+        self.weight = Parameter(torch.DoubleTensor(in_features, out_features))
         if bias:
-            self.bias = Parameter(torch.Tensor(out_features))
+            self.bias = Parameter(torch.DoubleTensor(out_features))
         else:
             self.register_parameter('bias', None)
 
     def forward(self, adj_matrix, x):
-        logger.info(f'{self.weight.shape} {x.shape}')
+        ## for debug
+        t=torch.matmul(x, self.weight)
+        logger.info(f'{t.shape} {adj_matrix.shape}')
+
+
         out = torch.bmm(adj_matrix, torch.matmul(x, self.weight))
         if self.bias is not None:
             out = out + self.bias
@@ -33,7 +37,7 @@ class GCNormReLUDrop(nn.Module):
     def __init__(self, in_features, out_features, dropout_rate):
         super(GCNormReLUDrop, self).__init__()
         self.gc = GraphConvolution(in_features, out_features)
-        self.ln = nn.LayerNorm(out_features)
+        self.ln = nn.LayerNorm(out_features).double()
         self.relu = nn.ReLU(inplace=True)
         self.drop = nn.Dropout(dropout_rate)
 
@@ -67,6 +71,7 @@ class GCN(Predictor):
         logger.info(f'model {self}')
 
     def forward(self, input, return_loss=None):
+        logger.info(f'{input["arch"]}')
         adjacency = input['adjacency']
         x = input['features']
         augments = input.get('augments', None)

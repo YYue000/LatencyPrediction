@@ -202,10 +202,10 @@ class NASBench201Dataset2(LatencyDataset):
 def _collate_fn(batch):
     ipt = {k:[_[k] for _ in batch] for k in ['arch_id', 'arch']}
     for k in ['adjacency', 'features', 'latency']:
-        ipt[k] = torch.as_tensor([_[k] for _ in batch])
+        ipt[k] = torch.as_tensor(np.array([_[k] for _ in batch])).double()
     k = 'augments'
     if k in batch[0].keys():
-        ipt[k] = torch.as_tensor([_[k] for _ in batch])
+        ipt[k] = torch.as_tensor(np.array([_[k] for _ in batch])).double()
     return ipt
 
 
