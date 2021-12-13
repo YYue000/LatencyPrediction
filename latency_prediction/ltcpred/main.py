@@ -17,6 +17,7 @@ def train(model, cfg):
     val_data = build_dataloader(cfg['data'], 'val')
     
     epochs = cfg['trainer']['epochs']
+    st_epoch = 0
     best_val_acc = 0
     best_epoch = None
 
@@ -27,12 +28,21 @@ def train(model, cfg):
 
     es = EarlyStopping(**cfg['trainer']['early_stopping']['kwargs'])
     es_start_epoch = cfg['trainer']['early_stopping']['start_epoch']
+
+    resume = cfg['trainer'].get('resume', None)
+    if resume is not None:
+        ckpt = torch.load(resume)
+        logger.info(f'resuming from {resume}')
+        model.load_state_dict(ckpt['state_dict'])
+        optimizer.load_state_dict(ckpt['optimizer'])
+        lr_scheduler.load_state_dict(ckpt['lr_scheduler'])
+        st_epoch = ckpt['epoch'] + 1
     
     save_freq = cfg['trainer'].get('save_freq', 1)
     
-    for epoch in range(epochs):
+    for epoch in range(st_epoch, epochs):
         model.train()
-        for it, input in enumerate(train_data):
+        for input in train_data:
             loss = model(input)
             optimizer.zero_grad()
             loss.backward()
@@ -51,13 +61,21 @@ def train(model, cfg):
             best_val_acc = accs[0]
             torch.save({'state_dict': model.state_dict(),
                         'epoch': epoch,
-                        'val_accs': accs},
+                        'val_accs': accs,
+                        'optimizer': optimizer.state_dict(),
+                        'lr_sceduler': lr_scheduler.state_dict(),
+                        'cfg': cfg
+                        },
                     f'checkpoints/ckpt_best.pth')
 
-        if epoch % save_freq == 0:
+        if epoch % save_freq == 0 or epoch == epochs-1:
             torch.save({'state_dict': model.state_dict(),
                         'epoch': epoch,
-                        'val_accs': accs},
+                        'val_accs': accs,
+                        'optimizer': optimizer.state_dict(),
+                        'lr_sceduler': lr_scheduler.state_dict(),
+                        'cfg': cfg
+                        },
                     f'checkpoints/ckpt_epoch{epoch}.pth')
 
 
@@ -74,11 +92,18 @@ def train(model, cfg):
 def test(model, test_data, cfg, return_loss=False):
     # inference
     model.eval()
+
+    resume = cfg['trainer'].get('resume', None)
+    if resume is not None:
+        ckpt = torch.load(resume)
+        logger.info(f'loading ckpt from {resume}')
+        model.load_state_dict(ckpt['state_dict'])
+
     results = []
     all_loss = 0 if return_loss else None
     N = len(test_data)
     with torch.no_grad():
-        for it, input in enumerate(test_data):
+        for input in test_data:
             y, loss = model.forward(input, return_loss)
             if loss is not None:
                 all_loss += loss/N
@@ -107,18 +132,13 @@ def main(args):
         cfg = cfg_test
     
     model = build_model(cfg['model'])
-    if args.resume:
-        ckpt = torch.load(args.resume)
-        logger.info(f'resuming from {args.resume}')
-        model.load_state_dict(ckpt['state_dict'])
-    
+
     if not args.test:
         save_path = 'checkpoints/ckpt.pth'
         if not os.path.exists(os.path.dirname(save_path)):
             os.makedirs(os.path.dirname(save_path))
 
         train(model, cfg)
-        torch.save(model.state_dict(), save_path)
 
         cfg = cfg_test
 
@@ -148,7 +168,6 @@ if __name__ == '__main__':
     parser.add_argument('--cfg', dest='cfg_file', required=True)
     parser.add_argument('-t', dest='test', action='store_true')
     parser.add_argument('--dump', dest='dump', action='store_true')
-    parser.add_argument('--resume', dest='resume', default=None)
     args = parser.parse_args()
     logger.info(args)
     main(args)
