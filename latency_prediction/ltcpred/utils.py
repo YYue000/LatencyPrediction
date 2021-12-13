@@ -43,7 +43,8 @@ def evaluate(results, error_percentage):
     for res in results:
         latency = res['latency']
         prediction = res['prediction']
-        delta = np.abs(latency-prediction)/prediction
+        delta = np.abs(latency-prediction)/latency
+        #delta = np.abs(latency-prediction)/prediction
         c += np.sum(delta<=error_percentage, axis=1)
         n += len(latency)
     c = c/n
