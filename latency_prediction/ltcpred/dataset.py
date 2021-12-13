@@ -36,7 +36,7 @@ class LatencyDataset(Dataset):
             info = {'arch_id': arch_id, 'arch': arch, 'latency': t}
             info['adjacency'], info['features'] = self._get_adjacency_matrix_and_features(arch)
             if self.aug_file_path is not None:
-                info['augments'] = aug_data[arch]
+                info['augments'] = np.array([aug_data[arch]])
             dataset.append(info)
             
         self.dataset = dataset
