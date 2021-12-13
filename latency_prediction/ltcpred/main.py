@@ -141,6 +141,8 @@ def main(args):
         train(model, cfg)
 
         cfg = cfg_test
+    else:
+        assert cfg['trainer'].get('resume', None) is not None
 
     test_data = build_dataloader(cfg['data'], 'test')
 

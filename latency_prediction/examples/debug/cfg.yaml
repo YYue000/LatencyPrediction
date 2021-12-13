@@ -54,4 +54,6 @@ data:
     shuffle: False
 
 train: {}
-test: {}
+test:
+  trainer:
+    resume: 'checkpoints/ckpt_best.pth'
