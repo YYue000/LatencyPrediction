@@ -45,10 +45,17 @@ def train(model, cfg):
         if accs[0] > best_val_acc:
             best_epoch = epoch
             best_val_acc = accs[0]
-            torch.save(model.state_dict(), f'checkpoints/ckpt_best.pth')
+            torch.save({'state_dict': model.state_dict(),
+                        'epoch': epoch,
+                        'val_accs': accs},
+                    f'checkpoints/ckpt_best.pth')
 
         if epoch % save_freq == 0:
-            torch.save(model.state_dict(), f'checkpoints/ckpt_epoch{epoch}.pth')
+            torch.save({'state_dict': model.state_dict(),
+                        'epoch': epoch,
+                        'val_accs': accs},
+                    f'checkpoints/ckpt_epoch{epoch}.pth')
+
         
     model.train() # model is at training at the end of train()
 
@@ -91,6 +98,10 @@ def main(args):
         cfg = cfg_test
     
     model = build_model(cfg['model'])
+    if args.resume:
+        ckpt = torch.load(args.resume)
+        logger.info(f'resuming from {args.resume}')
+        model.load_state_dict(ckpt['state_dict'])
     
     if not args.test:
         save_path = 'checkpoints/ckpt.pth'
@@ -103,14 +114,32 @@ def main(args):
         cfg = cfg_test
 
     test_data = build_dataloader(cfg['data'], 'test')
-    _, accs, __ = test(model, test_data, cfg)
+
+    results, accs, __ = test(model, test_data, cfg)
     logger.info(f'{accs}')
+
+    if args.dump:
+        import pickle
+        output_file = 'results/results.pickle'
+        if not os.path.exists(os.path.dirname(output_file)):
+            os.makedirs(os.path.dirname(output_file))
+        output_results = [{'arch':r['arch'][_],
+                            'prediction':r['prediction'][_],
+                            'latency':r['latency'][_]} 
+                        for r in results
+                        for _ in range(len(r['arch']))] 
+        pickle.dump(output_results, open(output_file, 'wb'))
+        with open(output_file.replace('pickle', 'txt'), 'w') as fw:
+            for r in output_results:
+                fw.write(f'{r}\n')
     return
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='An implementation of latency prediction')
     parser.add_argument('--cfg', dest='cfg_file', required=True)
     parser.add_argument('-t', dest='test', action='store_true')
+    parser.add_argument('--dump', dest='dump', action='store_true')
+    parser.add_argument('--resume', dest='resume', default=None)
     args = parser.parse_args()
-    print(args)
+    logger.info(args)
     main(args)
