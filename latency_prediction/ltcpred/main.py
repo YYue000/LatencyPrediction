@@ -28,14 +28,13 @@ def train(model, cfg):
     es = EarlyStopping(**cfg['trainer']['early_stopping']['kwargs'])
     es_start_epoch = cfg['trainer']['early_stopping']['start_epoch']
     
-    optimizer.zero_grad()
-
     save_freq = cfg['trainer'].get('save_freq', 1)
     
     for epoch in range(epochs):
         model.train()
         for it, input in enumerate(train_data):
             loss = model(input)
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
         
