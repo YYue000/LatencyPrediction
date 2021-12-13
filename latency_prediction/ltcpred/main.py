@@ -6,6 +6,7 @@ import torch
 from dataset import build_dataloader
 
 from utils import parse_config, build_model, build_optimizer, build_lr_scheduler, evaluate
+from utils import EarlyStopping
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s-%(filename)s#%(lineno)d:%(message)s')
 logger = logging.getLogger('global')
@@ -23,6 +24,10 @@ def train(model, cfg):
     step_on_val_loss = (cfg['trainer']['lr_scheduler']['type'] in ['ReduceLROnPlateau']) 
     step_on_val_loss_epoch = cfg['trainer']['lr_scheduler'].get('step_on_val_loss_epoch', -1)
     lr_scheduler = build_lr_scheduler(cfg['trainer']['lr_scheduler'], optimizer)
+
+    es = EarlyStopping(**cfg['trainer']['early_stopping']['kwargs'])
+    es_start_epoch = cfg['trainer']['early_stopping']['start_epoch']
+    
     optimizer.zero_grad()
 
     save_freq = cfg['trainer'].get('save_freq', 1)
@@ -56,9 +61,14 @@ def train(model, cfg):
                         'val_accs': accs},
                     f'checkpoints/ckpt_epoch{epoch}.pth')
 
+
+        if epoch > es_start_epoch:
+            if es.step(val_loss):
+                logger.info('Early stopping criterion is met, stop training now.')
+                break
         
     model.train() # model is at training at the end of train()
-
+    logger.info(f'best epoch {best_epoch} best_acc {best_val_acc}')
     return model
 
 
