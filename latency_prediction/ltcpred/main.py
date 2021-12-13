@@ -23,7 +23,6 @@ def train(model, cfg):
     step_on_val_loss = (cfg['trainer']['lr_scheduler']['type'] in ['ReduceLROnPlateau']) 
     step_on_val_loss_epoch = cfg['trainer']['lr_scheduler'].get('step_on_val_loss_epoch', -1)
     lr_scheduler = build_lr_scheduler(cfg['trainer']['lr_scheduler'], optimizer)
-    optimizer.zero_grad()
 
     save_freq = cfg['trainer'].get('save_freq', 1)
     
@@ -31,6 +30,7 @@ def train(model, cfg):
         model.train()
         for it, input in enumerate(train_data):
             loss = model(input)
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
         
