@@ -125,8 +125,13 @@ class NASBench201Dataset(LatencyDataset):
         label = label - 2 # zero and skip connect are removed
         mask = np.ones(self.node_num, dtype=np.bool)
         mask[1:] = alive
-        features = np.zeros([self.node_num, self.arch_len])
-        features[(np.arange(np.sum(mask)), label[mask])] = 1
+        if self.keep_dims:
+            features = np.zeros([self.node_num, self.arch_len])
+            features[(mask, label[mask])] = 1
+        else:
+            n = np.sum(mask)
+            features = np.zeros([n, self.arch_len])
+            features[(np.arange(n), label[mask])] = 1
         return features
 
     def prune_matrix(self, matrix):
