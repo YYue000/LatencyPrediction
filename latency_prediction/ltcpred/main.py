@@ -125,6 +125,7 @@ def get_cfg(cfg_raw, mode):
 
 def main(args):
     cfg_raw = parse_config(args.cfg_file)
+    logger.info(f'{cfg_raw}')
     cfg_test = get_cfg(cfg_raw, 'test')
     if not args.test:
         cfg = get_cfg(cfg_raw, 'train')

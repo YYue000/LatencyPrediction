@@ -4,10 +4,10 @@ import torch.nn.functional as F
 from functools import partial
 
 def MAPELoss(output, target):
-    return torch.mean(torch.abs((target - output) / target))
+    return torch.sum(torch.abs((target - output) / target))
 
 def RPDLoss(output, target):
-    return torch.mean(torch.abs(target - output) / (torch.abs(target +output) / 2))
+    return torch.sum(torch.abs(target - output) / (torch.abs(target +output) / 2))
 
 def MAPELoss_Diff(output, target):
     output = output[1:] - output[:-1]
