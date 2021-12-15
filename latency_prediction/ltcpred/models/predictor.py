@@ -1,6 +1,24 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from functools import partial
+
+def MAPELoss(output, target):
+    return torch.mean(torch.abs((target - output) / target))
+
+def RPDLoss(output, target):
+    return torch.mean(torch.abs(target - output) / (torch.abs(target +output) / 2))
+
+def MAPELoss_Diff(output, target):
+    output = output[1:] - output[:-1]
+    target = target[1:] - target[:-1]
+    return torch.mean(torch.abs((target - output) / target))
+
+def RPDLoss_Diff(output, target):
+    output = output[1:] - output[:-1]
+    target = target[1:] - target[:-1]
+    return torch.mean(torch.abs(target - output) / ((torch.abs(target) + torch.abs(output)) / 2))
+
 
 class Predictor(nn.Module):
     def __init__(self, criterion_cfg=None):
@@ -17,6 +35,10 @@ class Predictor(nn.Module):
             self.criterion = nn.MSELoss(reduction='sum')
         elif criterion_cfg['type'] == 'SmoothL1':
             self.criterion = nn.SmoothL1Loss(reduction='sum')
+        elif criterion_cfg['type'] == 'MAPE':
+            self.criterion = MAPELoss
+        elif criterion_cfg['type'] == 'RPD':
+            self.criterion = RPDLoss
         else:
             raise NotImplementedError
 
@@ -26,4 +48,5 @@ class Predictor(nn.Module):
         raise NotImplementedError
     
     def compute_loss(self, y, target):
-        return self.criterion(y,target)*self.loss_weight
+        B = y.shape[0]
+        return self.criterion(y,target)*self.loss_weight/B
