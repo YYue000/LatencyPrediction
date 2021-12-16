@@ -90,4 +90,52 @@ class GCN(Predictor):
         y = self.fc(x)
         return y
     
+
+class GCN2(Predictor):
+    def __init__(self, depth, 
+                    feature_dim, hidden_dim, augments_dim, dropout_rate,
+                    initializer=None,
+                    criterion_cfg=None):
+        super(GCN2, self).__init__(criterion_cfg)
+
+        self.gcs = nn.ModuleList(
+            [GCNormReLUDrop(feature_dim if _ == 0 else hidden_dim, hidden_dim, dropout_rate) 
+                for _ in range(depth)])
+        self.fc = nn.Linear(hidden_dim, 1).double()
+        if augments_dim > 0:
+            self.fc_aug = nn.Linear(augments_dim+1, 1).double()
+        
+        if initializer is not None:
+            initializer_gc = initializer['gc']
+            initialize(self.gcs, GraphConvolution, **initializer_gc)
+            initializer_fc = initializer.get('fc', None)
+            if initializer_fc is not None:
+                initialize(self.fc, nn.Linear,  **initializer_fc)
+        
+        logger.info(f'model {self}')
+
+    def forward(self, input, return_loss=None):
+        adjacency = input['adjacency']
+        x = input['features']
+        augments = input.get('augments', None)
+        y = self._forward(adjacency, x, augments).reshape(-1)
+        if not self.training and not return_loss:
+            return y, None
+            
+        target = input['latency']
+        loss = self.compute_loss(y, target)
+        if self.training:
+            return loss
+        else:
+            return y, loss
     
+    def _forward(self, adjacency, x, augments=None):
+        for gc in self.gcs:
+            x = gc(adjacency, x)
+        x = x[:,0] # use global node
+        y = self.fc(x)
+        if augments is not None:
+            x = torch.cat([y, augments], dim=1)
+            y = self.fc_aug(x)
+            
+        return y
