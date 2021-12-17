@@ -203,7 +203,15 @@ class NASBench201Dataset2(LatencyDataset):
         return adjacency_matrix
 
 
+class NASBench201AblationDataset(NASBench201Dataset):
+    def __init__(self, meta_file_path, aug_file_path=None, prune=True, keep_dims=True):
+        super(NASBench201AblationDataset, self).__init__(meta_file_path, aug_file_path=aug_file_path, prune=prune, keep_dims=keep_dims)
 
+    def _get_adjacency_matrix(self, arch):
+        matrix = np.zeros([self.node_num, self.node_num])
+        matrix = self._add_diag(matrix)
+        return matrix
+    
 def _collate_fn(batch):
     ipt = {k:[_[k] for _ in batch] for k in ['arch_id', 'arch']}
     for k in ['adjacency', 'features', 'latency']:
@@ -221,6 +229,8 @@ def build_dataloader(cfg_data, mode):
     search_space = cfg_data.get('search_space', 'nasbench201')
     if search_space == 'nasbench201':
         dataset = NASBench201Dataset(cfg_data['meta_file_path'], cfg_data.get('aug_file_path', None))
+    elif search_space == 'nasbench201_ablation':
+        dataset = NASBench201AblationDataset(cfg_data['meta_file_path'])
     else:
         raise NotImplementedError 
 
