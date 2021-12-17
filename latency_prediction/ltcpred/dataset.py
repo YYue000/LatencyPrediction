@@ -211,7 +211,14 @@ class NASBench201AblationDataset(NASBench201Dataset):
         matrix = np.zeros([self.node_num, self.node_num])
         matrix = self._add_diag(matrix)
         return matrix
-    
+
+class NASBench201AblationFeatureDataset(NASBench201Dataset):
+    def __init__(self, meta_file_path, aug_file_path=None, prune=True, keep_dims=True):
+        super(NASBench201AblationFeatureDataset, self).__init__(meta_file_path, aug_file_path=aug_file_path, prune=prune, keep_dims=keep_dims)
+
+    def _get_features(self, arch, alive):
+        return np.random.random([self.node_num, len(_opname_to_index)-2])
+
 def _collate_fn(batch):
     ipt = {k:[_[k] for _ in batch] for k in ['arch_id', 'arch']}
     for k in ['adjacency', 'features', 'latency']:
@@ -229,8 +236,10 @@ def build_dataloader(cfg_data, mode):
     search_space = cfg_data.get('search_space', 'nasbench201')
     if search_space == 'nasbench201':
         dataset = NASBench201Dataset(cfg_data['meta_file_path'], cfg_data.get('aug_file_path', None))
-    elif search_space == 'nasbench201_ablation':
+    elif search_space == 'nasbench201_ablation_matrix':
         dataset = NASBench201AblationDataset(cfg_data['meta_file_path'])
+    elif search_space == 'nasbench201_ablation_feature':
+        dataset = NASBench201AblationFeatureDataset(cfg_data['meta_file_path'])
     else:
         raise NotImplementedError 
 
