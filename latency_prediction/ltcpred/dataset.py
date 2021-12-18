@@ -210,7 +210,9 @@ class NASBench201AblationDataset(NASBench201Dataset):
     def _get_adjacency_matrix(self, arch):
         matrix = np.zeros([self.node_num, self.node_num])
         matrix = self._add_diag(matrix)
-        return matrix
+        normal_node_num = self.node_num - 1 # no global
+        alive = np.ones(normal_node_num ,dtype=np.bool)
+        return matrix, alive
 
 class NASBench201AblationFeatureDataset(NASBench201Dataset):
     def __init__(self, meta_file_path, aug_file_path=None, prune=True, keep_dims=True):
@@ -235,7 +237,7 @@ def build_dataloader(cfg_data, mode):
 
     search_space = cfg_data.get('search_space', 'nasbench201')
     if search_space == 'nasbench201':
-        dataset = NASBench201Dataset(cfg_data['meta_file_path'], cfg_data.get('aug_file_path', None))
+        dataset = NASBench201Dataset(cfg_data['meta_file_path'], cfg_data.get('aug_file_path', None), keep_dims=cfg_data.get('keep_dims', True))
     elif search_space == 'nasbench201_ablation_matrix':
         dataset = NASBench201AblationDataset(cfg_data['meta_file_path'])
     elif search_space == 'nasbench201_ablation_feature':
